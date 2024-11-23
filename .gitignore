@@ -1,0 +1,12 @@
+# Xcode
+DerivedData/
+build/
+
+# CocoaPods
+Pods/
+*.xcworkspace
+Podfile.lock
+
+# macOS Files
+.DS_Store
+
