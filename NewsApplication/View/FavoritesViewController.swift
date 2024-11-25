@@ -1,28 +1,40 @@
 //
-//  NewsViewController.swift
+//  FavouritesViewController.swift
 //  NewsApplication
 //
-//  Created by Aisha Karzhauova on 23.11.2024.
+//  Created by Aisha Karzhauova on 24.11.2024.
 //
 
 import UIKit
-import SnapKit
 import SafariServices
 
-class NewsViewController: UIViewController {
+class FavoritesViewController: UIViewController {
     private let tableView = UITableView()
-    private let viewModel = NewsViewModel()
+    private let viewModel = NewsViewModel() // Shared ViewModel
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
-        bindViewModel()
-        viewModel.fetchNews()
     }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+
+        // articles are fetched before loading likes
+        if viewModel.filteredArticles.isEmpty {
+            viewModel.fetchNews() // fetch articles if not already loaded
+        } else {
+            viewModel.loadLikes() // load likes only if articles are already available
+        }
+
+        tableView.reloadData()
+    }
+
 
     private func setupUI() {
         view.backgroundColor = .white
-        navigationItem.title = "Top News"
+        navigationItem.title = "Favorites"
+
         view.addSubview(tableView)
         tableView.snp.makeConstraints { make in
             make.edges.equalToSuperview()
@@ -32,37 +44,30 @@ class NewsViewController: UIViewController {
         tableView.delegate = self
     }
 
-    private func bindViewModel() {
-        viewModel.reloadData = { [weak self] in
-            DispatchQueue.main.async {
-                self?.tableView.reloadData()
-            }
-        }
+    private func loadFavorites() {
+        viewModel.loadLikes()
+        print("Favorite Articles in ViewController: \(viewModel.favoriteArticles.map { $0.title })") // Debugging
+        tableView.reloadData()
     }
 }
 
-extension NewsViewController: UITableViewDataSource, UITableViewDelegate {
+
+extension FavoritesViewController: UITableViewDataSource, UITableViewDelegate {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return viewModel.filteredArticles.count
+        return viewModel.favoriteArticles.count
     }
 
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "NewsCell", for: indexPath) as! NewsCell
-        let article = viewModel.filteredArticles[indexPath.row]
-        cell.configure(with: article, isLiked: article.isLiked)
-        
-        cell.likeAction = { [weak self] in
-            self?.viewModel.likeArticle(at: indexPath.row)
-        }
-
+        let article = viewModel.favoriteArticles[indexPath.row]
+        cell.configure(with: article, isLiked: true)
         return cell
     }
 
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-        let article = viewModel.filteredArticles[indexPath.row]
+        let article = viewModel.favoriteArticles[indexPath.row]
         guard let url = URL(string: article.url) else { return }
 
-        // Open the article in Safari Services
         let safariVC = SFSafariViewController(url: url)
         safariVC.modalPresentationStyle = .pageSheet
         present(safariVC, animated: true)
